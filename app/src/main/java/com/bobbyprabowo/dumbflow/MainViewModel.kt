@@ -45,8 +45,8 @@ class MainViewModel(
                     getData.execute().map { result ->
                         MainResult.InitialLoadResult.Success(result)
                     }.collect {
+                        delay(10000)
                         emit(it)
-                        delay(2000)
                     }
                 } catch (error: Throwable) {
                     emit(MainResult.InitialLoadResult.Error)
@@ -60,8 +60,8 @@ class MainViewModel(
         val actionInitialRefresh = {actionFlow: Flow<MainAction.InitialRefreshAction> ->
             flow<MainResult> {
                 try {
+                    delay(15000)
                     emit(MainResult.InitialRefreshResult.Success("Refresh Success"))
-                    delay(5000)
                 } catch (error: Throwable) {
                     emit(MainResult.InitialRefreshResult.Error)
                 }
@@ -85,22 +85,22 @@ class MainViewModel(
         resultFlow.scan(MainState(data = "IDLE")) { previousState, result ->
             when (result) {
                 MainResult.InitialLoadResult.Loading -> {
-                    previousState.copy()
+                    previousState.copy(data = "Load Loading")
                 }
                 is MainResult.InitialLoadResult.Success -> {
                     previousState.copy(data = result.result)
                 }
                 MainResult.InitialLoadResult.Error -> {
-                    previousState.copy()
+                    previousState.copy(data = "Load Error")
                 }
                 MainResult.InitialRefreshResult.Loading -> {
-                    previousState.copy()
+                    previousState.copy(data = "Refresh Loading")
                 }
                 is MainResult.InitialRefreshResult.Success -> {
                     previousState.copy(data = result.result)
                 }
                 MainResult.InitialRefreshResult.Error -> {
-                    previousState.copy()
+                    previousState.copy(data = "Refresh Error")
                 }
             }
         }

@@ -21,6 +21,7 @@ class MainActivity : AppCompatActivity() {
 
         viewModel = ViewModelProvider(this, MainViewModelFactory()).get(MainViewModel::class.java)
         viewModel.uiState.asLiveData().observe(this, {state ->
+            println(">>>> ${state.data}")
             Toast.makeText(this, state.data, Toast.LENGTH_LONG).show()
         })
     }
