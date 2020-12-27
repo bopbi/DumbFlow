@@ -2,11 +2,16 @@ package com.bobbyprabowo.dumbflow
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bobbyprabowo.dumbflow.domain.GetData
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 
 @ExperimentalCoroutinesApi
-class MainViewModel : ViewModel() {
+class MainViewModel(
+        private val getData: GetData
+) : ViewModel() {
 
     private val intentFlow = MutableSharedFlow<MainIntent>()
     private val _uiState = MutableStateFlow(MainState(data = "IDLE"))
@@ -37,7 +42,12 @@ class MainViewModel : ViewModel() {
         val actionInitialLoad = {actionFlow: Flow<MainAction.InitialLoadAction> ->
             flow<MainResult> {
                 try {
-                    emit(MainResult.InitialLoadResult.Success("Load Success"))
+                    getData.execute().map { result ->
+                        MainResult.InitialLoadResult.Success(result)
+                    }.collect {
+                        emit(it)
+                        delay(2000)
+                    }
                 } catch (error: Throwable) {
                     emit(MainResult.InitialLoadResult.Error)
                 }
@@ -51,6 +61,7 @@ class MainViewModel : ViewModel() {
             flow<MainResult> {
                 try {
                     emit(MainResult.InitialRefreshResult.Success("Refresh Success"))
+                    delay(5000)
                 } catch (error: Throwable) {
                     emit(MainResult.InitialRefreshResult.Error)
                 }
@@ -71,26 +82,25 @@ class MainViewModel : ViewModel() {
     }
 
     private val reducer = { resultFlow: Flow<MainResult> ->
-        resultFlow.onEach { result ->
-            val previousState = _uiState.value
-            _uiState.value = when (result) {
+        resultFlow.scan(MainState(data = "IDLE")) { previousState, result ->
+            when (result) {
                 MainResult.InitialLoadResult.Loading -> {
-                    previousState
+                    previousState.copy()
                 }
                 is MainResult.InitialLoadResult.Success -> {
                     previousState.copy(data = result.result)
                 }
                 MainResult.InitialLoadResult.Error -> {
-                    previousState
+                    previousState.copy()
                 }
                 MainResult.InitialRefreshResult.Loading -> {
-                    previousState
+                    previousState.copy()
                 }
                 is MainResult.InitialRefreshResult.Success -> {
                     previousState.copy(data = result.result)
                 }
                 MainResult.InitialRefreshResult.Error -> {
-                    previousState
+                    previousState.copy()
                 }
             }
         }
@@ -103,6 +113,10 @@ class MainViewModel : ViewModel() {
             .let(intentToAction)
             .let(actionProcessor)
             .let(reducer)
+                .flowOn(Dispatchers.IO)
+                .onEach { newState ->
+                    _uiState.value = newState
+                }
             .launchIn(viewModelScope)
 
         intentFlow.tryEmit(MainIntent.InitialLoadIntent)

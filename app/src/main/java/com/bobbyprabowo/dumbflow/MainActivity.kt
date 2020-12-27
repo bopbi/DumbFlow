@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
+        viewModel = ViewModelProvider(this, MainViewModelFactory()).get(MainViewModel::class.java)
         viewModel.uiState.asLiveData().observe(this, {state ->
             Toast.makeText(this, state.data, Toast.LENGTH_LONG).show()
         })
