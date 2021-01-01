@@ -24,5 +24,7 @@ class MainActivity : AppCompatActivity() {
             println(">>>> ${state.data}")
             Toast.makeText(this, state.data, Toast.LENGTH_LONG).show()
         })
+
+        viewModel.doInitialDataFetch()
     }
 }

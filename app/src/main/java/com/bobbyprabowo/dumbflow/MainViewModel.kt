@@ -19,11 +19,11 @@ class MainViewModel(
     val uiState: StateFlow<MainState> = _uiState
 
     private val intentFilter = { incomingFlow: Flow<MainIntent> ->
-        val sharedFlow = incomingFlow.shareIn(viewModelScope, SharingStarted.Eagerly)
+        val sharedFlow = incomingFlow.shareIn(viewModelScope, SharingStarted.Lazily)
 
         merge(
             sharedFlow.filter { it is MainIntent.InitialLoadIntent }.take(1),
-            sharedFlow.filter { it is MainIntent.InitialRefreshIntent }.take(1),
+            sharedFlow.filter { it is MainIntent.InitialRefreshIntent }.take(1)
         )
     }
 
@@ -37,38 +37,42 @@ class MainViewModel(
     }
 
     private val actionProcessor = { incomingFlow: Flow<MainAction> ->
-        val sharedFlow = incomingFlow.shareIn(viewModelScope, SharingStarted.Eagerly)
+        val sharedFlow = incomingFlow.shareIn(viewModelScope, SharingStarted.Lazily)
 
         val actionInitialLoad = {actionFlow: Flow<MainAction.InitialLoadAction> ->
-            flow<MainResult> {
-                try {
-                    getData.execute().map { result ->
-                        MainResult.InitialLoadResult.Success(result)
-                    }.collect {
-                        delay(10000)
-                        emit(it)
+            actionFlow.flatMapConcat {
+                flow<MainResult> {
+                    try {
+                        getData.execute().map { result ->
+                            MainResult.InitialLoadResult.Success(result)
+                        }.collect {
+                            delay(100)
+                            emit(it)
+                        }
+                    } catch (error: Throwable) {
+                        emit(MainResult.InitialLoadResult.Error)
                     }
-                } catch (error: Throwable) {
-                    emit(MainResult.InitialLoadResult.Error)
                 }
+                        .onStart {
+                            emit(MainResult.InitialLoadResult.Loading as MainResult)
+                        }
             }
-                .onStart {
-                    emit(MainResult.InitialLoadResult.Loading as MainResult)
-                }
         }
 
         val actionInitialRefresh = {actionFlow: Flow<MainAction.InitialRefreshAction> ->
-            flow<MainResult> {
-                try {
-                    delay(15000)
-                    emit(MainResult.InitialRefreshResult.Success("Refresh Success"))
-                } catch (error: Throwable) {
-                    emit(MainResult.InitialRefreshResult.Error)
+            actionFlow.flatMapConcat {
+                flow<MainResult> {
+                    try {
+                        delay(150)
+                        emit(MainResult.InitialRefreshResult.Success("Refresh Success"))
+                    } catch (error: Throwable) {
+                        emit(MainResult.InitialRefreshResult.Error)
+                    }
                 }
+                        .onStart {
+                            emit(MainResult.InitialRefreshResult.Loading as MainResult)
+                        }
             }
-                .onStart {
-                    emit(MainResult.InitialRefreshResult.Loading as MainResult)
-                }
         }
 
         merge(
@@ -107,8 +111,7 @@ class MainViewModel(
     }
 
     init {
-
-        intentFlow.asSharedFlow()
+        intentFlow
             .let(intentFilter)
             .let(intentToAction)
             .let(actionProcessor)
@@ -118,13 +121,11 @@ class MainViewModel(
                     _uiState.value = newState
                 }
             .launchIn(viewModelScope)
-
-        intentFlow.tryEmit(MainIntent.InitialLoadIntent)
-        intentFlow.tryEmit(MainIntent.InitialRefreshIntent)
     }
 
-    fun doSomething() {
-
+    fun doInitialDataFetch() {
+        intentFlow.tryEmit(MainIntent.InitialLoadIntent)
+        intentFlow.tryEmit(MainIntent.InitialRefreshIntent)
     }
 }
 
