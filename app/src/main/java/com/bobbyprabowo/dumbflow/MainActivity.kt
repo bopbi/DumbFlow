@@ -25,6 +25,9 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, state.data, Toast.LENGTH_LONG).show()
         })
 
-        lifecycleScope.launchWhenCreated { viewModel.doInitialDataFetch()  }
+        lifecycleScope.launchWhenCreated {
+            viewModel.doInitialDataLoad()
+            viewModel.doInitialDataFetch()
+        }
     }
 }

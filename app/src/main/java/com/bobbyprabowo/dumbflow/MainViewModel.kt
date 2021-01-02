@@ -44,17 +44,18 @@ class MainViewModel(
 
         val actionInitialLoad = { actionFlow: Flow<MainAction.InitialLoadAction> ->
             actionFlow.flatMapConcat {
-                try {
-                    getData.execute()
-                        .map { result ->
-                            MainResult.InitialLoadResult.Success(result) as MainResult
-                        }
-                        .onStart {
-                            emit(MainResult.InitialLoadResult.Loading as MainResult)
-                        }
-                } catch (error: Exception) {
-                    flowOf(MainResult.InitialLoadResult.Error)
+
+                flow<MainResult> {
+                    try {
+                        emitAll(getData.execute().map { MainResult.InitialLoadResult.Success(it) })
+                    } catch (exception: Throwable) {
+                        emit(MainResult.InitialLoadResult.Error)
+                    }
+
                 }
+                    .onStart {
+                        emit(MainResult.InitialLoadResult.Loading)
+                    }
 
             }
         }
@@ -123,8 +124,11 @@ class MainViewModel(
     }
 
     suspend fun doInitialDataFetch() {
-        intentFlow.emit(MainIntent.InitialLoadIntent)
         intentFlow.emit(MainIntent.InitialRefreshIntent)
+    }
+
+    suspend fun doInitialDataLoad() {
+        intentFlow.emit(MainIntent.InitialLoadIntent)
     }
 }
 
