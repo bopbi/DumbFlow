@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.bobbyprabowo.dumbflow.domain.GetData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 
+@FlowPreview
 @ExperimentalCoroutinesApi
 class MainViewModel(
         private val getData: GetData
