@@ -6,22 +6,23 @@ import com.bobbyprabowo.dumbflow.domain.GetData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import java.lang.Exception
 
 @FlowPreview
 @ExperimentalCoroutinesApi
 class MainViewModel(
-        private val getData: GetData
+    private val getData: GetData
 ) : ViewModel() {
 
     private val intentFlow = MutableSharedFlow<MainIntent>()
     private val _uiState = MutableStateFlow(MainState(data = "IDLE"))
+
     // The UI collects from this StateFlow to get its state updates
     val uiState: StateFlow<MainState> = _uiState
 
     private val intentFilter = { incomingFlow: Flow<MainIntent> ->
-        val sharedFlow = incomingFlow.shareIn(viewModelScope, SharingStarted.Lazily)
+        val sharedFlow = incomingFlow.shareIn(viewModelScope, SharingStarted.Eagerly)
 
         merge(
             sharedFlow.filter { it is MainIntent.InitialLoadIntent }.take(1),
@@ -31,7 +32,7 @@ class MainViewModel(
 
     private val intentToAction = { incomingFlow: Flow<MainIntent> ->
         incomingFlow.map { intent ->
-            when(intent) {
+            when (intent) {
                 is MainIntent.InitialLoadIntent -> MainAction.InitialLoadAction
                 is MainIntent.InitialRefreshIntent -> MainAction.InitialRefreshAction
             }
@@ -39,41 +40,37 @@ class MainViewModel(
     }
 
     private val actionProcessor = { incomingFlow: Flow<MainAction> ->
-        val sharedFlow = incomingFlow.shareIn(viewModelScope, SharingStarted.Lazily)
+        val sharedFlow = incomingFlow.shareIn(viewModelScope, SharingStarted.Eagerly)
 
-        val actionInitialLoad = {actionFlow: Flow<MainAction.InitialLoadAction> ->
+        val actionInitialLoad = { actionFlow: Flow<MainAction.InitialLoadAction> ->
             actionFlow.flatMapConcat {
-                flow<MainResult> {
-                    try {
-                        getData.execute().map { result ->
-                            MainResult.InitialLoadResult.Success(result)
-                        }.collect {
-                            delay(100)
-                            emit(it)
+                try {
+                    getData.execute()
+                        .map { result ->
+                            MainResult.InitialLoadResult.Success(result) as MainResult
                         }
-                    } catch (error: Throwable) {
-                        emit(MainResult.InitialLoadResult.Error)
-                    }
-                }
                         .onStart {
                             emit(MainResult.InitialLoadResult.Loading as MainResult)
                         }
+                } catch (error: Exception) {
+                    flowOf(MainResult.InitialLoadResult.Error)
+                }
+
             }
         }
 
-        val actionInitialRefresh = {actionFlow: Flow<MainAction.InitialRefreshAction> ->
+        val actionInitialRefresh = { actionFlow: Flow<MainAction.InitialRefreshAction> ->
             actionFlow.flatMapConcat {
                 flow<MainResult> {
                     try {
-                        delay(150)
                         emit(MainResult.InitialRefreshResult.Success("Refresh Success"))
                     } catch (error: Throwable) {
                         emit(MainResult.InitialRefreshResult.Error)
                     }
                 }
-                        .onStart {
-                            emit(MainResult.InitialRefreshResult.Loading as MainResult)
-                        }
+                    .onStart {
+                        emit(MainResult.InitialRefreshResult.Loading as MainResult)
+                    }
             }
         }
 
@@ -118,16 +115,16 @@ class MainViewModel(
             .let(intentToAction)
             .let(actionProcessor)
             .let(reducer)
-                .flowOn(Dispatchers.IO)
-                .onEach { newState ->
-                    _uiState.value = newState
-                }
+            .flowOn(Dispatchers.IO)
+            .onEach { newState ->
+                _uiState.value = newState
+            }
             .launchIn(viewModelScope)
     }
 
-    fun doInitialDataFetch() {
-        intentFlow.tryEmit(MainIntent.InitialLoadIntent)
-        intentFlow.tryEmit(MainIntent.InitialRefreshIntent)
+    suspend fun doInitialDataFetch() {
+        intentFlow.emit(MainIntent.InitialLoadIntent)
+        intentFlow.emit(MainIntent.InitialRefreshIntent)
     }
 }
 
@@ -148,6 +145,7 @@ sealed class MainResult {
         data class Success(val result: String) : InitialLoadResult()
         object Error : InitialLoadResult()
     }
+
     sealed class InitialRefreshResult : MainResult() {
         object Loading : InitialRefreshResult()
         data class Success(val result: String) : InitialRefreshResult()
@@ -156,5 +154,5 @@ sealed class MainResult {
 }
 
 data class MainState(
-    val data : String
+    val data: String
 )

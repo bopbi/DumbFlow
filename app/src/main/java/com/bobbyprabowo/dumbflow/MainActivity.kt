@@ -7,9 +7,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.subscribe
+import kotlinx.coroutines.FlowPreview
 
+@FlowPreview
 @ExperimentalCoroutinesApi
 class MainActivity : AppCompatActivity() {
 
@@ -25,6 +25,6 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, state.data, Toast.LENGTH_LONG).show()
         })
 
-        viewModel.doInitialDataFetch()
+        lifecycleScope.launchWhenCreated { viewModel.doInitialDataFetch()  }
     }
 }
