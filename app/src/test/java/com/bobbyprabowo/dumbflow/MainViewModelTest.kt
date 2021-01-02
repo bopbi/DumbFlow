@@ -48,11 +48,9 @@ internal class MainViewModelTest : CoroutineTest {
 
             @Test
             @DisplayName("then should emit Default State")
-            fun thenCondition() {
-                runBlocking {
-                    mainViewModel.uiState.test {
-                        assertEquals(MainState(data="IDLE"), expectItem())
-                    }
+            fun thenCondition() = runBlocking {
+                mainViewModel.uiState.test {
+                    assertEquals(MainState(data="IDLE"), expectItem())
                 }
             }
         }
