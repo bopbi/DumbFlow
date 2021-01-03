@@ -19,13 +19,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        viewModel = ViewModelProvider(this, MainViewModelFactory()).get(MainViewModel::class.java)
-        viewModel.uiState.asLiveData().observe(this, {state ->
-            println(">>>> ${state.data}")
-            Toast.makeText(this, state.data, Toast.LENGTH_LONG).show()
-        })
-
         lifecycleScope.launchWhenCreated {
+
+            viewModel = ViewModelProvider(this@MainActivity, MainViewModelFactory()).get(MainViewModel::class.java)
+            viewModel.uiState.asLiveData().observe(this@MainActivity, {state ->
+                println(">>>> ${state.data}")
+                Toast.makeText(this@MainActivity, state.data, Toast.LENGTH_LONG).show()
+            })
+
             viewModel.doInitialDataLoad()
             viewModel.doInitialDataFetch()
         }

@@ -7,7 +7,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
-import java.lang.Exception
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -52,7 +51,7 @@ class MainViewModel(
                         emit(MainResult.InitialLoadResult.Error)
                     }
 
-                }.flowOn(Dispatchers.IO)
+                }
                     .onStart {
                         emit(MainResult.InitialLoadResult.Loading)
                     }
@@ -68,7 +67,7 @@ class MainViewModel(
                     } catch (error: Throwable) {
                         emit(MainResult.InitialRefreshResult.Error)
                     }
-                }.flowOn(Dispatchers.IO)
+                }
                     .onStart {
                         emit(MainResult.InitialRefreshResult.Loading as MainResult)
                     }
@@ -115,7 +114,9 @@ class MainViewModel(
             .let(intentFilter)
             .let(intentToAction)
             .let(actionProcessor)
+            .flowOn(Dispatchers.IO)
             .let(reducer)
+            .flowOn(Dispatchers.Default)
             .onEach { newState ->
                 _uiState.value = newState
             }
