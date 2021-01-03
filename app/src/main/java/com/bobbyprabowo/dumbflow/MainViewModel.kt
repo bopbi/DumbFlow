@@ -52,7 +52,7 @@ class MainViewModel(
                         emit(MainResult.InitialLoadResult.Error)
                     }
 
-                }
+                }.flowOn(Dispatchers.IO)
                     .onStart {
                         emit(MainResult.InitialLoadResult.Loading)
                     }
@@ -68,7 +68,7 @@ class MainViewModel(
                     } catch (error: Throwable) {
                         emit(MainResult.InitialRefreshResult.Error)
                     }
-                }
+                }.flowOn(Dispatchers.IO)
                     .onStart {
                         emit(MainResult.InitialRefreshResult.Loading as MainResult)
                     }
@@ -116,7 +116,6 @@ class MainViewModel(
             .let(intentToAction)
             .let(actionProcessor)
             .let(reducer)
-            .flowOn(Dispatchers.IO)
             .onEach { newState ->
                 _uiState.value = newState
             }

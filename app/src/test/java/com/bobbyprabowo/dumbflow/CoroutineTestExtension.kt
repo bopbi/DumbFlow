@@ -6,20 +6,27 @@ import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.jupiter.api.extension.*
 
-@ExtendWith(TestCoroutineExtension::class)
+@ExperimentalCoroutinesApi
+@ExtendWith(CoroutineTestExtension::class)
 interface CoroutineTest {
     var testScope: TestCoroutineScope
     var dispatcher: TestCoroutineDispatcher
+
+    @After
+    fun after() {
+        dispatcher.cleanupTestCoroutines()
+    }
 }
 
 @ExperimentalCoroutinesApi
-class TestCoroutineExtension : TestInstancePostProcessor, BeforeAllCallback, AfterEachCallback,
+class CoroutineTestExtension : TestInstancePostProcessor, BeforeAllCallback, AfterEachCallback,
     AfterAllCallback {
 
-    val dispatcher = TestCoroutineDispatcher()
-    val testScope = TestCoroutineScope(dispatcher)
+    private val dispatcher = TestCoroutineDispatcher()
+    private val testScope = TestCoroutineScope(dispatcher)
 
     override fun postProcessTestInstance(testInstance: Any?, context: ExtensionContext?) {
 
