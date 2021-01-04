@@ -45,16 +45,14 @@ class MainViewModel(
             actionFlow.flatMapConcat {
 
                 flow<MainResult> {
-                    try {
-                        emitAll(getData.execute().map { MainResult.InitialLoadResult.Success(it) })
-                    } catch (exception: Throwable) {
-                        emit(MainResult.InitialLoadResult.Error)
-                    }
-
+                    emitAll(getData.execute().map { MainResult.InitialLoadResult.Success(it) })
+                }.catch {
+                    emit(MainResult.InitialLoadResult.Error)
                 }
                     .onStart {
                         emit(MainResult.InitialLoadResult.Loading)
                     }
+                        .flowOn(Dispatchers.IO)
 
             }
         }
@@ -70,7 +68,7 @@ class MainViewModel(
                 }
                     .onStart {
                         emit(MainResult.InitialRefreshResult.Loading as MainResult)
-                    }
+                    }.flowOn(Dispatchers.IO)
             }
         }
 
@@ -114,9 +112,7 @@ class MainViewModel(
             .let(intentFilter)
             .let(intentToAction)
             .let(actionProcessor)
-            .flowOn(Dispatchers.IO)
             .let(reducer)
-            .flowOn(Dispatchers.Default)
             .onEach { newState ->
                 _uiState.value = newState
             }
