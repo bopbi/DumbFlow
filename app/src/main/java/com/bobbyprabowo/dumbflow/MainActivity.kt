@@ -2,10 +2,10 @@ package com.bobbyprabowo.dumbflow
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.Toast
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
+import com.bobbyprabowo.dumbflow.databinding.ActivityMainBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 
@@ -17,16 +17,17 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        val binding = ActivityMainBinding.inflate(layoutInflater)
+        val view = binding.root
+        setContentView(view)
 
-        lifecycleScope.launchWhenCreated {
+        viewModel = ViewModelProvider(this@MainActivity, MainViewModelFactory()).get(MainViewModel::class.java)
+        viewModel.uiState.asLiveData().observe(this@MainActivity, {state ->
+            println(">>>> ${state.data}")
+            binding.mainText.text = state.data
+        })
 
-            viewModel = ViewModelProvider(this@MainActivity, MainViewModelFactory()).get(MainViewModel::class.java)
-            viewModel.uiState.asLiveData().observe(this@MainActivity, {state ->
-                println(">>>> ${state.data}")
-                Toast.makeText(this@MainActivity, state.data, Toast.LENGTH_LONG).show()
-            })
-
+        lifecycleScope.launchWhenResumed {
             viewModel.doInitialDataLoad()
             viewModel.doInitialDataFetch()
         }
