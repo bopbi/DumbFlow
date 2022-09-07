@@ -107,10 +107,10 @@ class MainViewModel(
 
     init {
         intentFlow
-            .let(intentFilter)
-            .let(intentToAction)
-            .let(actionProcessor)
-            .let(reducer)
+            .let(intentFilter) // intent limiter, like debounce, take
+            .let(intentToAction) //  convert intent to action
+            .let(actionProcessor) // where use case / repository called based on action type
+            .let(reducer) // reducer function
             .onEach { newState ->
                 _uiState.value = newState
             }
