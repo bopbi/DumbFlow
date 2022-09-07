@@ -22,10 +22,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(view)
 
         viewModel = ViewModelProvider(this@MainActivity, MainViewModelFactory()).get(MainViewModel::class.java)
-        viewModel.uiState.asLiveData().observe(this@MainActivity, {state ->
+        viewModel.uiState.asLiveData().observe(this@MainActivity) { state ->
             println(">>>> ${state.data}")
             binding.mainText.text = state.data
-        })
+        }
 
         lifecycleScope.launchWhenResumed {
             viewModel.doInitialDataLoad()

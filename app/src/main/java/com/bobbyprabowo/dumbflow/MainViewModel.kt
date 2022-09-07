@@ -6,7 +6,9 @@ import com.bobbyprabowo.dumbflow.domain.GetData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlin.time.Duration.Companion.seconds
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -43,32 +45,28 @@ class MainViewModel(
 
         val actionInitialLoad = { actionFlow: Flow<MainAction.InitialLoadAction> ->
             actionFlow.flatMapConcat {
-
-                flow<MainResult> {
-                    emitAll(getData.execute().map { MainResult.InitialLoadResult.Success(it) })
-                }.catch {
-                    emit(MainResult.InitialLoadResult.Error)
-                }
+                getData.execute()
+                    .map { MainResult.InitialLoadResult.Success(it) as MainResult }
+                    .catch {
+                        emit(MainResult.InitialLoadResult.Error)
+                    }
                     .onStart {
+                        delay(1.seconds)
                         emit(MainResult.InitialLoadResult.Loading)
                     }
-                        .flowOn(Dispatchers.IO)
+                    .flowOn(Dispatchers.IO)
 
             }
         }
 
         val actionInitialRefresh = { actionFlow: Flow<MainAction.InitialRefreshAction> ->
             actionFlow.flatMapConcat {
-                flow<MainResult> {
-                    try {
-                        emit(MainResult.InitialRefreshResult.Success("Refresh Success"))
-                    } catch (error: Throwable) {
-                        emit(MainResult.InitialRefreshResult.Error)
-                    }
-                }
+                flowOf(MainResult.InitialRefreshResult.Success("Refresh Success") as MainResult)
                     .onStart {
+                        delay(1.seconds)
                         emit(MainResult.InitialRefreshResult.Loading as MainResult)
-                    }.flowOn(Dispatchers.IO)
+                    }
+                    .flowOn(Dispatchers.IO)
             }
         }
 
