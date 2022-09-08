@@ -5,75 +5,61 @@ import com.bobbyprabowo.dumbflow.domain.GetData
 import io.mockk.MockKAnnotations
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.TestCoroutineDispatcher
-import kotlinx.coroutines.test.TestCoroutineScope
-import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.assertEquals
+import kotlinx.coroutines.test.*
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Test
 import kotlin.time.ExperimentalTime
 
 
 @FlowPreview
 @ExperimentalTime
 @ExperimentalCoroutinesApi
-internal class MainViewModelTest : CoroutineTest {
+class MainViewModelTest {
 
-    override lateinit var testScope: TestCoroutineScope
-    override lateinit var dispatcher: TestCoroutineDispatcher
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     @MockK
     private lateinit var mockedGetData: GetData
 
     private lateinit var mainViewModel: MainViewModel
 
-    @BeforeEach
+    @Before
     fun setup() {
         MockKAnnotations.init(this)
-        mainViewModel = MainViewModel(mockedGetData)
+        Dispatchers.setMain(testDispatcher)
+        mainViewModel = MainViewModel(mockedGetData, testDispatcher)
     }
 
-    @DisplayName("Given Nothing")
-    @Nested
-    inner class DefaultStateTest {
+    @After
+    fun after() {
+        Dispatchers.resetMain()
+    }
 
-        @DisplayName("When not receive any intent")
-        @Nested
-        inner class NoState {
-
-            @Test
-            @DisplayName("then should emit Default State")
-            fun thenCondition() = runBlocking {
-                mainViewModel.uiState.test {
-                    assertEquals(MainState(data = "IDLE"), expectItem())
-                }
-            }
+    @Test
+    fun testDefault() = runTest {
+        mainViewModel.uiState.test {
+            assertEquals(MainState(data = "IDLE"), awaitItem())
         }
     }
 
-    @DisplayName("Given getData emit error")
-    @Nested
-    inner class FailedGetData {
-
-        private val expectedError = Exception("error")
-
-        @BeforeEach
-        fun setup() {
-            every { mockedGetData.execute() } returns flow { throw expectedError }
+    @Test
+    fun thenCondition() = runTest {
+        val expectedError = Exception("error")
+        every { mockedGetData.execute() } returns flow { throw expectedError }
+        mainViewModel.uiState.test {
+            assertEquals(MainState(data = "IDLE"), awaitItem())
+            mainViewModel.doInitialDataLoad()
+            assertEquals(MainState(data = "Load Loading"), awaitItem())
+            assertEquals(MainState(data = "Load Error"), awaitItem())
         }
 
-        @Test
-        @DisplayName("doInitialDataFetch then should emit Default State")
-        fun thenCondition() = runBlocking { // if you are using turbine, do not use runblocking see https://github.com/cashapp/turbine/blob/39740b4dad4977de427e1bf43121570ad0f2a618/src/jvmTest/kotlin/app/cash/turbine/jvmTestUtil.kt#L31
-            mainViewModel.uiState.test {
-                assertEquals(MainState(data = "IDLE"), expectItem())
-                mainViewModel.doInitialDataLoad()
-                assertEquals(MainState(data = "Load Loading"), expectItem())
-                assertEquals(MainState(data = "Load Error"), expectItem())
-            }
-
-        }
     }
 }

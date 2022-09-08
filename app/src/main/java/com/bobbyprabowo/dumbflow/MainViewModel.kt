@@ -8,12 +8,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.seconds
 
 @FlowPreview
 @ExperimentalCoroutinesApi
 class MainViewModel(
-    private val getData: GetData
+    private val getData: GetData,
+    private val coroutineContext: CoroutineContext = Dispatchers.Main
 ) : ViewModel() {
 
     private val intentFlow = MutableSharedFlow<MainIntent>()
@@ -46,15 +48,16 @@ class MainViewModel(
         val actionInitialLoad = { actionFlow: Flow<MainAction.InitialLoadAction> ->
             actionFlow.flatMapConcat {
                 getData.execute()
-                    .map { MainResult.InitialLoadResult.Success(it) as MainResult }
+                    .map {
+                        MainResult.InitialLoadResult.Success(it) as MainResult }
                     .catch {
+                        delay(1.seconds)
                         emit(MainResult.InitialLoadResult.Error)
                     }
                     .onStart {
-                        delay(1.seconds)
                         emit(MainResult.InitialLoadResult.Loading)
                     }
-                    .flowOn(Dispatchers.IO)
+                    .flowOn(coroutineContext)
 
             }
         }
@@ -63,10 +66,9 @@ class MainViewModel(
             actionFlow.flatMapConcat {
                 flowOf(MainResult.InitialRefreshResult.Success("Refresh Success") as MainResult)
                     .onStart {
-                        delay(1.seconds)
                         emit(MainResult.InitialRefreshResult.Loading as MainResult)
                     }
-                    .flowOn(Dispatchers.IO)
+                    .flowOn(coroutineContext)
             }
         }
 
